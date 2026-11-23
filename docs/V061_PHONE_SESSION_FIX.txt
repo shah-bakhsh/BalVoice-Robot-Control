@@ -1,0 +1,41 @@
+Bilingual Voice v0.6.1: browser-session fix (Raspberry Pi)
+
+Problem fixed:
+  English or Balochi is recognized, but v0.6 reports:
+  "Not sent — use your connected Android phone".
+
+Cause:
+  v0.6 requires BOTH an active /client/connect record AND a user-agent
+  containing "android", "iphone", etc. Android browsers sometimes use a
+  non-mobile UA and browser session can expire during the 3s+ recognition.
+
+This update:
+  - Requires an active registered browser session, not an unreliable UA string.
+  - Re-registers the page immediately before sending each recognition request.
+  - Increases idle session timeout to 35 seconds (client pings every 4s).
+  - Keeps motor control disabled by default, mandatory v06 firmware handshake,
+    command confidence thresholds, Arduino's short movement pulses, and STOP.
+  - No changes to recognition models, sensor pins, servo, or motor firmware.
+
+INSTALL ON RASPBERRY PI:
+  1. Copy bilingual_phone_session_fix_v061.zip into ~/Downloads.
+  2. Press Ctrl+C to stop the running bilingual server.
+  3. cd ~/bilingual_robot_voice_v03
+  4. cp app.py app_before_fix.py
+  5. cp index.html index_before_fix.html
+  6. unzip -o ~/Downloads/bilingual_phone_session_fix_v061.zip -d .
+  7. python3 -m py_compile app.py
+  8. With motors UNPOWERED, start recognition-only first:
+        bash start_robot.sh
+     Test both languages and check the log.
+  9. Only after confirming Arduino handshake, USB stability, correct motor
+     supply, ultrasonic checks, and wheels raised, start supervised motor tests:
+        ROBOT_ENABLE_MOTORS=1 ROBOT_SAFE_SKETCH_CONFIRMED=YES bash start_robot.sh
+  10. On Android, refresh https://raspberrypi.tailb99b29.ts.net:8443/?v=61
+      and tap Speak.
+
+IMPORTANT:
+  Any registered browser on the private tailnet can request a voice movement
+  when motors are explicitly enabled. Keep Tailscale private, do not expose
+  this port publicly, and use a physical motor power cutoff. This update
+  does not repair an Arduino USB disconnect; stop if it happens again.

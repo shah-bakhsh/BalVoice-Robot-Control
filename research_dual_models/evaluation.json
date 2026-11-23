@@ -1,0 +1,464 @@
+{
+  "dataset": {
+    "total": 226,
+    "labels": {
+      "rasten kash a bro": 41,
+      "noise": 25,
+      "dema bro": 42,
+      "chapen kasha bro": 40,
+      "bosht": 40,
+      "poshta bro": 38
+    },
+    "formats": {
+      ".wav": 82,
+      ".ogg": 144
+    },
+    "notes": "No speaker metadata; cross-validation splits may share speakers, cannot infer deployment accuracy."
+  },
+  "folds": [
+    {
+      "fold": 1,
+      "svm_accuracy": 0.618421052631579,
+      "cnn_accuracy": 0.7368421052631579,
+      "cnn_best_epoch": 50
+    },
+    {
+      "fold": 2,
+      "svm_accuracy": 0.7466666666666667,
+      "cnn_accuracy": 0.76,
+      "cnn_best_epoch": 40
+    },
+    {
+      "fold": 3,
+      "svm_accuracy": 0.7066666666666667,
+      "cnn_accuracy": 0.6666666666666666,
+      "cnn_best_epoch": 26
+    }
+  ],
+  "svm_cv": {
+    "accuracy": 0.6903,
+    "n": 226,
+    "correct": 156,
+    "report": {
+      "bosht": {
+        "precision": 0.9142857142857143,
+        "recall": 0.8,
+        "f1-score": 0.8533333333333334,
+        "support": 40.0
+      },
+      "chapen kasha bro": {
+        "precision": 0.525,
+        "recall": 0.525,
+        "f1-score": 0.525,
+        "support": 40.0
+      },
+      "dema bro": {
+        "precision": 0.6428571428571429,
+        "recall": 0.8571428571428571,
+        "f1-score": 0.7346938775510204,
+        "support": 42.0
+      },
+      "noise": {
+        "precision": 0.8333333333333334,
+        "recall": 0.8,
+        "f1-score": 0.8163265306122449,
+        "support": 25.0
+      },
+      "poshta bro": {
+        "precision": 0.6428571428571429,
+        "recall": 0.47368421052631576,
+        "f1-score": 0.5454545454545454,
+        "support": 38.0
+      },
+      "rasten kash a bro": {
+        "precision": 0.6744186046511628,
+        "recall": 0.7073170731707317,
+        "f1-score": 0.6904761904761905,
+        "support": 41.0
+      },
+      "accuracy": 0.6902654867256637,
+      "macro avg": {
+        "precision": 0.7054586563307494,
+        "recall": 0.6938573568066508,
+        "f1-score": 0.6942140795712225,
+        "support": 226.0
+      },
+      "weighted avg": {
+        "precision": 0.6968340536461548,
+        "recall": 0.6902654867256637,
+        "f1-score": 0.6877674158963666,
+        "support": 226.0
+      }
+    },
+    "confusion": [
+      [
+        32,
+        0,
+        7,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        21,
+        4,
+        1,
+        6,
+        8
+      ],
+      [
+        2,
+        3,
+        36,
+        1,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        1,
+        20,
+        1,
+        2
+      ],
+      [
+        0,
+        10,
+        5,
+        1,
+        18,
+        4
+      ],
+      [
+        0,
+        6,
+        3,
+        0,
+        3,
+        29
+      ]
+    ]
+  },
+  "cnn_cv": {
+    "accuracy": 0.7212,
+    "n": 226,
+    "correct": 163,
+    "report": {
+      "bosht": {
+        "precision": 0.875,
+        "recall": 0.875,
+        "f1-score": 0.875,
+        "support": 40.0
+      },
+      "chapen kasha bro": {
+        "precision": 0.6486486486486487,
+        "recall": 0.6,
+        "f1-score": 0.6233766233766234,
+        "support": 40.0
+      },
+      "dema bro": {
+        "precision": 0.7555555555555555,
+        "recall": 0.8095238095238095,
+        "f1-score": 0.7816091954022989,
+        "support": 42.0
+      },
+      "noise": {
+        "precision": 0.7647058823529411,
+        "recall": 0.52,
+        "f1-score": 0.6190476190476191,
+        "support": 25.0
+      },
+      "poshta bro": {
+        "precision": 0.6222222222222222,
+        "recall": 0.7368421052631579,
+        "f1-score": 0.6746987951807228,
+        "support": 38.0
+      },
+      "rasten kash a bro": {
+        "precision": 0.6904761904761905,
+        "recall": 0.7073170731707317,
+        "f1-score": 0.6987951807228916,
+        "support": 41.0
+      },
+      "accuracy": 0.7212389380530974,
+      "macro avg": {
+        "precision": 0.7261014165425931,
+        "recall": 0.7081138313262832,
+        "f1-score": 0.7120879022883594,
+        "support": 226.0
+      },
+      "weighted avg": {
+        "precision": 0.7245614804958896,
+        "recall": 0.7212389380530974,
+        "f1-score": 0.7191504347108763,
+        "support": 226.0
+      }
+    },
+    "confusion": [
+      [
+        35,
+        0,
+        3,
+        1,
+        1,
+        0
+      ],
+      [
+        0,
+        24,
+        1,
+        1,
+        8,
+        6
+      ],
+      [
+        3,
+        0,
+        34,
+        1,
+        3,
+        1
+      ],
+      [
+        2,
+        2,
+        6,
+        13,
+        0,
+        2
+      ],
+      [
+        0,
+        5,
+        1,
+        0,
+        28,
+        4
+      ],
+      [
+        0,
+        6,
+        0,
+        1,
+        5,
+        29
+      ]
+    ]
+  },
+  "svm_.ogg_to_.wav": {
+    "accuracy": 0.4146,
+    "n": 82,
+    "correct": 34,
+    "report": {
+      "bosht": {
+        "precision": 0.75,
+        "recall": 0.8571428571428571,
+        "f1-score": 0.8,
+        "support": 14.0
+      },
+      "chapen kasha bro": {
+        "precision": 0.21621621621621623,
+        "recall": 0.6153846153846154,
+        "f1-score": 0.32,
+        "support": 13.0
+      },
+      "dema bro": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 15.0
+      },
+      "noise": {
+        "precision": 0.5263157894736842,
+        "recall": 0.6666666666666666,
+        "f1-score": 0.5882352941176471,
+        "support": 15.0
+      },
+      "poshta bro": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 12.0
+      },
+      "rasten kash a bro": {
+        "precision": 0.4,
+        "recall": 0.3076923076923077,
+        "f1-score": 0.34782608695652173,
+        "support": 13.0
+      },
+      "accuracy": 0.4146341463414634,
+      "macro avg": {
+        "precision": 0.3154220009483167,
+        "recall": 0.40781440781440786,
+        "f1-score": 0.34267689684569486,
+        "support": 82.0
+      },
+      "weighted avg": {
+        "precision": 0.32201887381604966,
+        "recall": 0.4146341463414634,
+        "f1-score": 0.3500642505146279,
+        "support": 82.0
+      }
+    },
+    "confusion": [
+      [
+        12,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        8,
+        0,
+        3,
+        0,
+        2
+      ],
+      [
+        2,
+        10,
+        0,
+        1,
+        0,
+        2
+      ],
+      [
+        0,
+        4,
+        0,
+        10,
+        0,
+        1
+      ],
+      [
+        1,
+        5,
+        0,
+        5,
+        0,
+        1
+      ],
+      [
+        1,
+        8,
+        0,
+        0,
+        0,
+        4
+      ]
+    ]
+  },
+  "svm_.wav_to_.ogg": {
+    "accuracy": 0.0694,
+    "n": 144,
+    "correct": 10,
+    "report": {
+      "bosht": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 26.0
+      },
+      "chapen kasha bro": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 27.0
+      },
+      "dema bro": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 27.0
+      },
+      "noise": {
+        "precision": 0.06944444444444445,
+        "recall": 1.0,
+        "f1-score": 0.12987012987012986,
+        "support": 10.0
+      },
+      "poshta bro": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 26.0
+      },
+      "rasten kash a bro": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 28.0
+      },
+      "accuracy": 0.06944444444444445,
+      "macro avg": {
+        "precision": 0.011574074074074075,
+        "recall": 0.16666666666666666,
+        "f1-score": 0.021645021645021644,
+        "support": 144.0
+      },
+      "weighted avg": {
+        "precision": 0.004822530864197531,
+        "recall": 0.06944444444444445,
+        "f1-score": 0.009018759018759018,
+        "support": 144.0
+      }
+    },
+    "confusion": [
+      [
+        0,
+        0,
+        0,
+        26,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        27,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        27,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        10,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        26,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        28,
+        0,
+        0
+      ]
+    ]
+  },
+  "final_cnn_epochs": 49,
+  "model_selection": "Select using independent phone recordings; both exported as recognition-only candidates."
+}

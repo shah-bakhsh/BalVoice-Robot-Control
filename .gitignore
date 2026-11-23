@@ -1,0 +1,27 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+# Credentials and per-machine settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+hf_token*
+# Personal audio recordings and caches (not redistributed)
+audios.zip
+*.ogg
+*.wav
+*.mp3
+recordings/
+datasets/
+cache/
+research_dual_models/cache/
+# OS/editor
+.DS_Store
+.vscode/
+.idea/

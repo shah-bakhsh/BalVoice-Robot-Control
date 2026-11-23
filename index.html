@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Robot Voice — English + Balochi</title>
+<style>
+  :root { font-family: system-ui, sans-serif; color: #192c43; background: #f2f6fb; }
+  body { margin:0; }
+  main { max-width:440px; margin:20px auto; padding:18px; }
+  h1 {font-size:26px; margin:0 0 4px}
+  p {line-height:1.5}
+  .muted {color:#617084; font-size:14px}
+  .status {display:inline-flex;align-items:center;gap:7px;font-size:13px;background:#edf2f8;border-radius:20px;padding:7px 12px;margin-top:9px}
+  .dot {width:9px;height:9px;border-radius:50%;background:#e07e42}.dot.ok{background:#249666}
+  .panel {margin-top:20px;background:#fff;border:1px solid #dde6f0;border-radius:18px;padding:20px;box-shadow:0 8px 24px #203b5411}
+  .modes {display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 24px}
+  label {border:1px solid #ccd5e2;border-radius:12px;padding:8px 9px;font-size:13px;cursor:pointer}
+  label:has(input:checked){border-color:#195db0;background:#e9f2ff}
+  #speak {display:block;margin:0 auto;width:164px;height:164px;border-radius:100%;background:#145db2;color:white;border:none;box-shadow:0 8px 30px #175cac42;font-size:22px;font-weight:bold;cursor:pointer;touch-action:manipulation}
+  #speak:disabled{opacity:.65;cursor:wait}
+  #hint{text-align:center;min-height:24px}
+  #out {border-top:1px solid #e0e8f0;padding-top:18px;margin-top:20px}
+  #phrase {font-size:27px;font-weight:750;word-wrap:break-word;margin:8px 0}
+  #result {font-weight:700;color:#195eac}
+  #board {padding:12px;margin-top:14px;background:#f1f5fa;border-radius:10px;font-size:14px;word-wrap:break-word}
+  #error {font-size:13px;color:#a33535;white-space:pre-wrap}
+  footer {text-align:center;color:#687b90;margin-top:18px;font-size:12px}
+</style>
+</head>
+<body>
+<main>
+<h1>🎙️ Robot Voice</h1>
+<p class="muted">English + Balochi · Raspberry Pi 5</p>
+<div class="status"><span class="dot" id="dot"></span><span id="connection">Connecting phone…</span></div>
+<section class="panel">
+  <div class="muted">Choose language</div>
+  <div class="modes">
+    <label><input type="radio" name="mode" value="auto" checked> Both</label>
+    <label><input type="radio" name="mode" value="english"> English</label>
+    <label><input type="radio" name="mode" value="balochi"> Balochi</label>
+  </div>
+  <button type="button" id="speak">🎤<br>Speak</button>
+  <p class="muted" id="hint">Tap once and say one command (3 seconds).</p>
+  <div id="out" aria-live="polite">
+    <div class="muted">LAST VOICE COMMAND</div>
+    <div id="phrase">Waiting for voice</div>
+    <div id="result">No command yet</div>
+    <div class="muted" id="detail"></div>
+    <div id="error"></div>
+  </div>
+  <div id="board">Arduino: Checking connection…</div>
+</section>
+<footer>Physical motor cutoff required · Voice recognition can make mistakes</footer>
+</main>
+<script>
+// Only the browser microphone needs this small JavaScript; recognition and motors run in Python/C++.
+const byId = id => document.getElementById(id);
+const clientId = 'phone_' + (crypto.randomUUID ? crypto.randomUUID().replaceAll('-','') : String(Date.now()));
+let recording = false, lastId = null;
+const mode = () => document.querySelector('input[name="mode"]:checked').value;
+const pause = ms => new Promise(r => setTimeout(r,ms));
+const post = async (url, payload) => {
+  const resp = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(!resp.ok) throw Error('Server returned '+resp.status);
+  return resp.json();
+};
+function display(event){
+  if(!event || event.id === lastId) return;
+  lastId = event.id;
+  byId('phrase').textContent = event.accepted ? event.heard : 'Not recognized';
+  byId('result').textContent = event.accepted ? event.action+' ('+event.code+')' : 'NO COMMAND';
+  byId('result').style.color = event.accepted ? '#196a43' : '#b04438';
+  byId('detail').textContent = event.accepted ? event.motor_message : (event.reason || 'Try again');
+  byId('error').textContent = event.accepted ? '' :
+     (event.guesses || []).map(x=>x.language+': '+(x.text||'none')+' (score '+x.score+')').join('\n');
+}
+function showStatus(status){
+  byId('dot').className='dot ok';
+  byId('connection').textContent='Phone connected to Raspberry Pi';
+  byId('board').textContent=status.arduino_connected ?
+    'Arduino: Connected · '+(status.arduino_last_message || 'Waiting') :
+    'Arduino: OFF · Recognition testing only';
+  if(!recording) display(status.latest);
+}
+async function ping(){
+  try { showStatus(await post('/client/ping',{client_id:clientId})); }
+  catch(e){ byId('dot').className='dot'; byId('connection').textContent='Raspberry Pi disconnected'; }
+}
+async function speak(){
+  if(recording) return;
+  recording=true;
+  byId('speak').disabled=true;
+  byId('speak').textContent='Listening…';
+  let stream,recorder;
+  try{
+    if(!window.isSecureContext || !navigator.mediaDevices || !window.MediaRecorder)
+      throw Error('Use the HTTPS Tailscale URL in Chrome for microphone access.');
+    stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const types=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/webm','audio/mp4'];
+    const type=types.find(t=>MediaRecorder.isTypeSupported(t));
+    recorder=new MediaRecorder(stream, type?{mimeType:type}:{});
+    const chunks=[];
+    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+    const finished=new Promise((resolve,reject)=>{
+      recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType||'audio/webm'}));
+      recorder.onerror=()=>reject(Error('Microphone recording failed'));
+    });
+    recorder.start();byId('hint').textContent='Speak now…';
+    await pause(3000);
+    recorder.stop();
+    const audio=await finished;
+    byId('hint').textContent='Raspberry Pi is recognizing…';
+    const form=new FormData();
+    form.append('file',audio,audio.type.includes('mp4')?'voice.mp4':audio.type.includes('ogg')?'voice.ogg':'voice.webm');
+    form.append('mode',mode());
+    form.append('client_id',clientId);
+    // Refresh this browser's session before sending a movement request.
+    // Prevents an expired session or a slow first connection from blocking it.
+    await post('/client/connect',{client_id:clientId});
+    const response=await fetch('/recognize',{method:'POST',body:form});
+    const data=await response.json();
+    if(!response.ok)throw Error(data.detail||'Recognition failed');
+    display(data.event);
+    byId('hint').textContent='Tap Speak for another command.';
+    await ping();
+  }catch(e){
+    byId('phrase').textContent='Audio error';byId('result').textContent='NO COMMAND';
+    byId('detail').textContent=e.message;byId('hint').textContent='Tap to retry.';
+    post('/client/error',{client_id:clientId,message:String(e.message||e)}).catch(()=>{});
+  }finally{
+    if(recorder && recorder.state==='recording')recorder.stop();
+    if(stream)stream.getTracks().forEach(t=>t.stop());
+    recording=false;byId('speak').disabled=false;byId('speak').innerHTML='🎤<br>Speak';
+  }
+}
+byId('speak').addEventListener('click',speak);
+window.addEventListener('pagehide',()=>navigator.sendBeacon('/client/disconnect',new Blob([JSON.stringify({client_id:clientId})],{type:'application/json'})));
+(async()=>{
+  try{showStatus(await post('/client/connect',{client_id:clientId}));}
+  catch(e){byId('connection').textContent='Cannot connect to Raspberry Pi';}
+})();
+setInterval(ping,4000);
+</script>
+</body>
+</html>
