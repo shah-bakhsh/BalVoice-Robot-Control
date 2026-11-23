@@ -54,8 +54,6 @@ tags:
 - balochi
 - speech-classification
 - experimental
-license: other
-license_name: no-license-selected
 ---
 
 # BalVoice Robot Control — Balochi voice-command research
@@ -161,9 +159,6 @@ def main() -> None:
             commit_message="Publish BalVoice Balochi model checkpoints and evaluation",
         )
         print(f"Uploaded successfully: {result}")
-        listed = {item.rfilename for item in api.list_repo_tree(
-            repo_id=args.repo, repo_type="model", recursive=True)
-            if hasattr(item, "rfilename")}
         required = set(MODEL_FILES + SUPPORT_FILES + ["README.md", "SHA256SUMS.txt"])
         # Check using list_repo_files to support multiple hub versions.
         listed = set(api.list_repo_files(repo_id=args.repo, repo_type="model"))
