@@ -1,113 +1,104 @@
+<div align="center">
+
 # BalVoice Robot Control
 
-### Balochi + English voice control for a Raspberry Pi 5 and Arduino Mega 2560 robot
+**A Balochi + English voice-controlled four-wheel robot**  
+*Raspberry Pi 5 · Arduino Mega 2560 · Offline Speech Recognition · Android Browser*
 
-**Research prototype · Offline speech recognition · Android phone microphone · Arduino motor shield · Ultrasonic obstacle sensing**
+![BalVoice Robot Control showcase](assets/balvoice-robot-showcase.webp)
 
-[![Research prototype](https://img.shields.io/badge/status-experimental-orange)](docs/SAFETY.md)
-[![Raspberry Pi 5](https://img.shields.io/badge/platform-Raspberry%20Pi%205-c51a4a)](docs/ARCHITECTURE.md)
-[![Arduino Mega](https://img.shields.io/badge/controller-Arduino%20Mega%202560-00878f)](Arduino/Robot_Car_Bilingual_Safe/Robot_Car_Bilingual_Safe.ino)
-[![Balochi](https://img.shields.io/badge/voice-Balochi%20%2B%20English-blue)](research_dual_models/README.md)
+[![Research prototype](https://img.shields.io/badge/status-research%20prototype-F5A623?style=flat-square)](docs/SAFETY.md)
+[![Raspberry Pi 5](https://img.shields.io/badge/Raspberry%20Pi-5-C51A4A?style=flat-square)](docs/ARCHITECTURE.md)
+[![Arduino Mega](https://img.shields.io/badge/Arduino-Mega%202560-00878F?style=flat-square)](Arduino/Robot_Car_Bilingual_Safe/Robot_Car_Bilingual_Safe.ino)
+[![Languages](https://img.shields.io/badge/Voice-Balochi%20%2B%20English-3578E5?style=flat-square)](#voice-commands)
+[![Recognition](https://img.shields.io/badge/recognition-local%20models-1F9D82?style=flat-square)](#speech-recognition-models)
 
-> **Safety status:** The trained Balochi classifiers are **not reliable enough to control an unattended moving robot**. Keep the wheels raised and motor power disconnected for recognition-only testing. Motor control is disabled by default, and a physical motor-power cutoff is required during supervised hardware experiments. See [Safety](docs/SAFETY.md).
+**[Quick Start](#quick-start--raspberry-pi)** · **[Voice Commands](#voice-commands)** · **[Hardware](#hardware--connections)** · **[Models](#speech-recognition-models)** · **[Safety](#safety-first)** · **[Troubleshooting](docs/TROUBLESHOOTING.md)**
 
-**Project links:** [GitHub repository](https://github.com/shah-bakhsh/BalVoice-Robot-Control) · [Hugging Face model repository](https://huggingface.co/shah-bakhsh/BalVoice-Robot-Control) (verify uploaded weights separately).
+</div>
 
-## Overview
+> [!IMPORTANT]
+> **Experimental robotics project, not a validated autonomous vehicle.** The Balochi classifiers have substantial errors on unseen recordings. Motor power is disabled by default in the Pi app. Use an accessible physical motor-power cutoff, lift the wheels during initial tests, and do not use unreliable speech recognition for unattended movement.
 
-BalVoice lets an Android phone supply microphone audio to a Raspberry Pi, which uses two *separate* speech-recognition systems:
+## Meet BalVoice
 
-- **English:** an external offline **Vosk** model, `vosk-model-small-en-us-0.15` (not shipped in this repository).
-- **Balochi (integrated controller):** a small, custom **MFCC + SVM** keyword classifier stored in `balochi_model_v02.joblib`.
+**BalVoice** is a university robotics research prototype that explores voice interaction in **Balochi and English**. An Android phone records a short spoken instruction; a Raspberry Pi 5 processes the sound and, when checks permit it, sends a one-letter serial command to an Arduino Mega 2560. The Arduino contains motor-control and ultrasonic obstacle-handling code.
 
-Research experiments in `research_dual_models/` also include an **SVM comparison model and a small log-mel CNN** for Raspberry Pi recognition-only tests. **The CNN is not automatically connected to the motor controller.**
+The project aims to make human–robot interaction accessible in a local language using lightweight speech models and inexpensive robot hardware. It is an **evolving prototype**, with both working software components and unresolved hardware/reliability tests.
 
-```text
-Android Chrome (microphone)
-           │
-           ▼  Private Tailscale HTTPS
-    Raspberry Pi 5
-    FastAPI (app.py)
-           │
-           ├─ English ──► Vosk
-           └─ Balochi ──► experimental SVM
-                         │
-                         ▼
-               recognition + safety checks
-                         │
-               [opt-in hardware tests only]
-                         ▼  USB serial: F/B/L/R/S
-                 Arduino Mega 2560
-                         │
-          ┌──────────────┴──────────────┐
-          ▼                             ▼
-      AFMotor V1 shield           Ultrasonic + servo
-      Four DC motors              Obstacle sensing
+### Mobile control dashboard — design concept
+
+![BalVoice proposed Android voice dashboard](assets/balvoice-mobile-dashboard.webp)
+
+> **Design preview, not a live application screenshot.** This mockup illustrates a possible next-generation phone dashboard. Its example recognition result and command reference are nonfunctional. The actual browser voice interface used by the current FastAPI application is [`index.html`](index.html). You can inspect the standalone [mobile design preview](design/mobile-dashboard-concept.html); it does **not** control hardware.
+
+The **robot hero illustration** above is a rendered showcase based on project component and assembly photographs, not a substitute for measured real-world validation.
+
+## Highlights
+
+| Capability | How it works | Current status |
+|---|---|---|
+| English voice commands | Offline **Vosk** recognizer | Integrated in voice server; requires external English Vosk checkpoint |
+| Balochi commands | Original **MFCC + SVM** keyword recognizer | Integrated but weak on new phone recordings |
+| Two experimental Balochi models | MFCC SVM + log-mel CNN comparison | Trained and evaluated for recognition-only testing |
+| Android microphone | Browser recording over private Tailscale HTTPS | Implemented; requires running Pi service and private network |
+| Arduino communication | USB serial with firmware handshake and guarded command sending | Implemented; USB stability and powered motor operation still need verification |
+| Four-wheel drive | Arduino Mega + AFMotor V1 L293D motor shield | Firmware implemented; actual movement not fully validated end-to-end |
+| Obstacle sensing | Ultrasonic distance sensor + servo sweep | Firmware implemented; supervised physical testing required |
+| Safety checks | Confidence rejection, disabled-by-default motors, short movement pulses | Implemented in code; **not** a certified safety system |
+
+## How it works
+
+```mermaid
+flowchart TD
+  A[Android phone microphone] --> B[Private Tailscale HTTPS]
+  B --> C[Raspberry Pi 5 - FastAPI]
+  C --> D{Voice language}
+  D -->|English| E[Vosk speech recognition]
+  D -->|Balochi| F[Original SVM keyword model]
+  E --> G{Acceptance and safety checks}
+  F --> G
+  G -->|Rejected| H[Report result - no movement]
+  G -->|Allowed in supervised test| I[USB serial - F / B / L / R / S]
+  I --> J[Arduino Mega 2560]
+  K[Ultrasonic sensor and servo] --> J
+  J --> L[L293D motor shield]
+  L --> M[Four DC motors and wheels]
 ```
 
-## Supported voice commands
+The **research CNN is not connected to the moving robot** by default. The Arduino's `A` autonomous-mode command is a separate manual mode, not a voice command automatically sent by the Pi.
 
-| Meaning | English | Balochi (Roman script) | Serial code |
-|---|---|---|---|
+## Voice commands
+
+| Action | English | Balochi (Latin script) | Arduino code |
+|:---|:---|:---|:---:|
 | Stop | Stop / Halt | **Bosht** | `S` |
 | Forward | Forward | **Dema bro** | `F` |
-| Backward | Backward | **Poshta bro** | `B` |
-| Turn left | Left / Turn left | **Chapen kasha bro** | `L` |
-| Turn right | Right / Turn right | **Rasten kash a bro** | `R` |
+| Reverse | Backward | **Poshta bro** | `B` |
+| Left | Left / Turn left | **Chapen kasha bro** | `L` |
+| Right | Right / Turn right | **Rasten kash a bro** | `R` |
 
-Arduino diagnostics additionally support `?` (firmware handshake) and `D` (distance). `A` enters autonomous obstacle-avoidance mode, and `V` enters stopped voice mode; **the Raspberry Pi motor bridge does not send `A` automatically**. The board boots with motors stopped.
+**Arduino-only diagnostics:** `?` requests `PONG_SAFE_V06`, `D` asks for `DISTANCE_CM`, `V` selects stopped voice mode, and `A` selects the separate automatic obstacle-avoidance mode. A recognized command can still be rejected because of low confidence, unavailable Arduino connection, or a failed safety check.
 
-## What's included
+## Hardware & connections
 
-```text
-BalVoice-Robot-Control/
-├── app.py, index.html                 # FastAPI server and Android-friendly web page
-├── recognizer.py                     # English Vosk + original Balochi SVM routing
-├── balochi_features.py, balochi_v02.py
-├── balochi_model_v02.joblib          # Original integrated Balochi classifier
-├── motor_link.py, test_arduino.py    # Guarded USB serial bridge and diagnostics
-├── test_audio.py, train_balochi.py   # Original audio testing and training utilities
-├── check_install.py, start_robot.sh
-├── requirements.txt, .env.example, .gitignore
-├── Arduino/Robot_Car_Bilingual_Safe/
-│   └── Robot_Car_Bilingual_Safe.ino   # Arduino firmware (Arduino Mega + AFMotor V1)
-├── research_dual_models/
-│   ├── balochi_cnn_final.pt          # Experimental PyTorch CNN checkpoint
-│   ├── balochi_cnn_numpy.npz         # CNN weights for lightweight Pi inference
-│   ├── balochi_svm_final.joblib      # Experimental SVM checkpoint
-│   ├── dual_recognizer.py, cnn_runtime.py, test_dual.py
-│   ├── train_dual.py, prep.py, web_test.py, index.html
-│   ├── evaluation.json, README.md   # Benchmark results and limitations
-│   └── requirements_pi.txt, requirements_train.txt
-├── docs/
-│   ├── ARCHITECTURE.md               # Hardware/software design
-│   ├── SAFETY.md                     # Safe testing rules
-│   ├── TROUBLESHOOTING.md            # Common phone, USB and model issues
-│   ├── VOICE_SERVER_V06.md           # Historical integration instructions
-│   └── V061_PHONE_SESSION_FIX.txt
-├── tests/test_release_integrity.py
-└── MODEL_SHA256SUMS                  # Checkpoints' SHA-256 hashes
-```
-
-## Hardware requirements
-
-| Item | Role |
+| Component | Role |
 |---|---|
-| Raspberry Pi 5 + appropriate power supply | Speech processing, FastAPI, Tailscale |
-| Arduino Mega 2560 | Motor timing, obstacle detection and safety stops |
-| Adafruit / L293D **Motor Shield V1** (AFMotor library) | Controls 4 DC motors (M1–M4) |
-| 4-wheel robot chassis and motors | Robot movement |
-| Ultrasonic sensor | Obstacle detection: `TRIG=24`, `ECHO=22` |
-| Servo scanner | Sensor orientation: `SERVO=44` |
-| Properly rated **separate motor battery** + cutoff switch | Motor power; don't draw motor current from Raspberry Pi USB |
-| Android phone with Chrome | Microphone and command interface |
-| Private Tailscale network | HTTPS access between phone and Pi |
+| Raspberry Pi 5, appropriate power supply | FastAPI backend, audio processing, private networking |
+| Arduino Mega 2560 | Serial receiver, motor timing, ultrasonic/servo control |
+| L293D **AFMotor V1** motor shield | M1–M4 outputs for four DC gear motors |
+| Four-wheel chassis | Vehicle platform |
+| Ultrasonic sensor | Distance measurement; sketch `TRIG=24`, `ECHO=22` |
+| Micro servo | Sweeps the sensor; sketch `SERVO=44` |
+| Separate, properly rated motor power + accessible cutoff | Motor electricity independent of Raspberry Pi USB power |
+| Android phone with Chrome | Capture and send voice command clips |
+| Private Tailscale network | HTTPS communication between phone and Pi |
 
-Motor shield V1 jumper behavior must be checked against your exact shield revision. Disconnect power before changing wiring or jumpers. **Never connect a motor battery directly to Raspberry Pi GPIO/USB power.**
+**Electrical warning:** verify the exact motor shield revision and its supply jumper before attaching the motor battery. Disconnect every power source before rewiring. **Never power the motors from the Pi USB port or connect raw motor-battery power to Raspberry Pi GPIO.**
 
-## Quick start: recognition-only (safe default)
+## Quick start — Raspberry Pi
 
-Run on Raspberry Pi OS (Python 3), from a terminal:
+### 1. Install the application (motors remain off)
 
 ```bash
 sudo apt update
@@ -118,32 +109,47 @@ cd BalVoice-Robot-Control
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+```
 
-# Download the licensed external Vosk model separately, then set its path.
+### 2. Configure the external English Vosk model
+
+Download the licensed `vosk-model-small-en-us-0.15` model separately and update the local path:
+
+```bash
 export VOSK_MODEL_PATH="$HOME/robot-live-voice/models/vosk-model-small-en-us-0.15"
-
 python check_install.py
+```
+
+### 3. Start the recognition-only server
+
+```bash
 bash start_robot.sh
 ```
 
-`start_robot.sh` serves on **127.0.0.1:8001**. With no motor-enable flags, it runs recognition only and **does not open the Arduino serial port**. Keep the server terminal open.
+The default server uses **`127.0.0.1:8001`** and **does not enable motors**. Keep it running; in a second terminal, inspect the status endpoint:
 
-If you already configured Tailscale Serve to point to port 8001, open the Pi's private HTTPS URL on Android Chrome. Otherwise configure Serve after checking the current configuration:
+```bash
+curl -sS -i http://127.0.0.1:8001/status
+```
+
+### 4. Access it privately from Android
+
+Check your existing Tailscale settings on the Pi:
 
 ```bash
 tailscale status
 tailscale serve status
-# This example may need adjustment for your installed Tailscale version:
-tailscale serve --bg --https=8443 http://127.0.0.1:8001
 ```
 
-Record one short phrase using the phone webpage. Check the recognition result both in Chrome and the Raspberry Pi terminal. If `/status` is not responding, see [Troubleshooting](docs/TROUBLESHOOTING.md).
+If necessary, configure a private Tailscale Serve HTTPS proxy for port `8001` according to your installed Tailscale version. On the phone, enable Tailscale, open the **private HTTPS address** in Chrome, allow microphone permission, and test one short instruction. Never expose the motor-control page publicly.
 
-## Verify Arduino independently (motors unpowered)
+> The included `design/mobile-dashboard-concept.html` is only a static layout. For real recording and recognition, use the **FastAPI-served home page** from `index.html`.
 
-Flash [`Robot_Car_Bilingual_Safe.ino`](Arduino/Robot_Car_Bilingual_Safe/Robot_Car_Bilingual_Safe.ino) with the **AFMotor V1 library** installed, and select **Arduino Mega 2560** in Arduino IDE.
+## Arduino firmware and independent hardware checks
 
-With wheels raised, **motor battery disconnected**, and the voice server plus Arduino Serial Monitor stopped:
+1. Open [`Arduino/Robot_Car_Bilingual_Safe/Robot_Car_Bilingual_Safe.ino`](Arduino/Robot_Car_Bilingual_Safe/Robot_Car_Bilingual_Safe.ino) in Arduino IDE. Select **Arduino Mega 2560** and install the compatible **AFMotor V1** library.
+2. With **motor battery disconnected**, ensure no other program holds the serial port (stop the Pi voice server and Arduino Serial Monitor).
+3. Check the firmware handshake and ultrasonic measurement:
 
 ```bash
 source .venv/bin/activate
@@ -151,48 +157,68 @@ python test_arduino.py '?'
 python test_arduino.py D
 ```
 
-The firmware must answer `PONG_SAFE_V06` to the first test. The distance test should report `DISTANCE_CM`. Verify that no USB disconnections or over-current warnings occur. **Do not enable motor power or bypass a failed handshake**. See [Safety](docs/SAFETY.md).
+Expected response to `?`: `PONG_SAFE_V06`. The distance query should return `DISTANCE_CM`. Do not continue to powered tests if USB disconnects, the Arduino fails the handshake, or distance sensing is unreliable. See [hardware troubleshooting](docs/TROUBLESHOOTING.md) and [safety rules](docs/SAFETY.md).
 
-## Research models: test both without moving the robot
+## Speech recognition models
+
+BalVoice separates its **currently integrated original Balochi SVM** from two newer **recognition-only candidates**:
+
+| Model | Feature representation | Reported shuffled 3-fold CV | Deployed as motor controller? |
+|---|---|---:|---|
+| Original integrated Balochi SVM | MFCC-style features | Experimental; phone command scores sometimes ~0.30 | In voice server, but confidence-gated |
+| Research SVM | MFCC temporal features | **69.0%** (156 / 226) | No |
+| Research CNN | Log-mel spectrogram | **72.1%** (163 / 226) | No |
+
+The research set contained **229 recordings**, reduced to **226 unique clips** after removing three exact duplicates. The CNN misclassified **12 of 25 noise recordings** in the reported cross-validation. These numbers **do not establish accuracy on new speakers or actual robot safety**; recording-source effects were substantial.
+
+Read [`research_dual_models/README.md`](research_dual_models/README.md) and [`research_dual_models/evaluation.json`](research_dual_models/evaluation.json) for details.
+
+### Compare the research models without moving motors
 
 ```bash
 cd research_dual_models
-# Using the repository root venv is fine if dependencies are installed there.
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements_pi.txt
-python test_dual.py /path/to/new-recording.wav --mode balochi
+python test_dual.py /path/to/recording.wav --mode balochi
 ```
 
-The experimental comparison server can be run separately with `bash start_phone_test.sh` after stopping the main application on port 8001. The comparison code **never opens the Arduino serial port**.
+No automatic command transmission to Arduino is performed by the research comparison app.
 
-### Benchmark results (research only)
+## Repository guide
 
-| Model | Input representation | Shuffled 3-fold CV | Operational status |
-|---|---|---:|---|
-| Original integrated Balochi SVM | MFCC-derived features | Earlier experimental training; phone confidence ~0.30 on some commands | Weak live-phone generalization |
-| Research SVM | MFCC temporal features | **69.0%** (156/226) | Recognition-only candidate |
-| Research CNN | Log-mel spectrogram | **72.1%** (163/226) | Recognition-only candidate |
+```text
+BalVoice-Robot-Control/
+├── README.md
+├── assets/
+│   ├── balvoice-robot-showcase.webp       # Rendered project illustration
+│   └── balvoice-mobile-dashboard.webp    # Proposed mobile UI preview
+├── design/
+│   └── mobile-dashboard-concept.html      # Static UI preview, no Arduino connection
+├── app.py, index.html                     # Current FastAPI voice application
+├── recognizer.py                          # Vosk and original Balochi SVM routing
+├── motor_link.py, test_arduino.py         # Guarded USB serial and test tools
+├── balochi_model_v02.joblib              # Integrated original classifier
+├── Arduino/Robot_Car_Bilingual_Safe/     # Arduino Mega firmware
+├── research_dual_models/                 # CNN/SVM checkpoints, training, evaluation
+├── docs/                                 # Architecture, safety, troubleshooting
+├── tests/                                # Integrity checks
+├── start_robot.sh, requirements.txt
+└── MODEL_SHA256SUMS                       # Model checksums
+```
 
-Training used **226 unique recordings** (five commands plus noise; 229 before three exact duplicates). The CNN misclassified **12/25 noise examples** in cross-validation. The original recording environment differs from a new Android phone, and speakers may overlap between folds. **These scores are not field accuracy or safety guarantees.** See [full evaluation](research_dual_models/evaluation.json).
+## Safety first
 
-## Project status and limitations
+- **Motor control is disabled by default**; do not bypass failed checks or lower speech confidence thresholds to force motion.
+- Use an accessible **physical cutoff** and elevate the wheels for early testing.
+- Check USB stability and separate motor power before hardware experiments.
+- Never treat a voice classifier score as a certified safety guarantee.
+- Do not operate the robot unattended or near people until independent sensing and emergency-stop reliability have been verified.
+- Do not publish speakers' voice recordings without appropriate consent.
 
-- **Available:** phone voice capture, English Vosk support, original Balochi SVM recognition, guarded Arduino serial protocol, safe-boot firmware, ultrasonic/servo code, motor-shield control code, and independent model comparison.
-- **Not demonstrated as reliable:** Balochi prediction on a new phone/speaker, USB electrical stability in every setup, live robot movement from the integrated app, unattended navigation, and emergency stop reliability after power failure.
-- **Deployment rule:** never treat a recognized word or a high model score as sufficient proof of safe movement.
-- **Privacy:** the original voice recordings and access credentials are intentionally **not published**. Obtain all speakers' informed consent before distributing audio.
+See [`docs/SAFETY.md`](docs/SAFETY.md).
 
-## Documentation
-
-- [System architecture and command flow](docs/ARCHITECTURE.md)
-- [Safety requirements](docs/SAFETY.md)
-- [Troubleshooting and diagnostics](docs/TROUBLESHOOTING.md)
-- [Research model details and training](research_dual_models/README.md)
-- [Historical v0.6 integration notes](docs/VOICE_SERVER_V06.md)
-- [Model integrity checksums](MODEL_SHA256SUMS)
-
-## Development and testing
+## Testing, known limitations and next steps
 
 ```bash
 python3 -m compileall -q app.py recognizer.py motor_link.py research_dual_models
@@ -200,10 +226,28 @@ python3 -m unittest discover -s tests -v
 sha256sum -c MODEL_SHA256SUMS
 ```
 
-CI tests file integrity and Python syntax only; **they cannot certify voice recognition, robot mechanics or hardware safety**.
+These checks verify syntax and model-file integrity; they do **not** establish physical motor operation, recognition reliability, or mechanical safety.
 
-## Contributing and licensing
+**Current gaps:** Balochi new-speaker robustness, reliable rejection of noise, independent phone-session and USB stability testing, verified powered movement from the integrated app, and independently tested emergency-stop behavior. Future work includes collecting more varied phone data, better evaluation, safely integrating a stronger model, and improving the mobile UI.
 
-Suggestions and improvements are welcome via GitHub issues and pull requests. Please document the hardware, Pi OS/Python version, phone/browser, test conditions, and results, and avoid including secrets or recordings without consent.
+## Team and academic context
 
-**No license is granted by default.** The repository owner has not yet selected an open-source license; do not assume model weights, voice recordings, or external Vosk/Arduino dependencies may be redistributed freely. Separate component licenses apply to external dependencies.
+A Computer Science robotics project at the **University of Turbat**. Project group: **Shah Bakhsh, Baber Sakhee, Nizam Ud Din, and Faisal Ghulam**.
+
+## Links and further reading
+
+- [Repository source](https://github.com/shah-bakhsh/BalVoice-Robot-Control)
+- [Hugging Face model repository](https://huggingface.co/shah-bakhsh/BalVoice-Robot-Control) — verify checkpoint availability separately
+- [Architecture](docs/ARCHITECTURE.md) · [Safety](docs/SAFETY.md) · [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Historical integration instructions](docs/VOICE_SERVER_V06.md)
+- [Model checksums](MODEL_SHA256SUMS)
+
+---
+
+<div align="center">
+
+**BalVoice Robot Control** · Balochi-language AI research, embedded systems, and responsible robotics.
+
+*No open-source license is currently granted by the repository. Third-party software and model licenses apply separately.*
+
+</div>
